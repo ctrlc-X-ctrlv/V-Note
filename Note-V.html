@@ -1,0 +1,484 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href='https://www.vartikel.com/favicon.ico' rel='icon' type='image/x-icon'/>
+<title>Notepad, Permalink, Images</title>
+<style>
+        body {
+            background-color: #d9dadf;
+            color: #000;
+            font-family: Arial, sans-serif;
+            padding: 0px 30px;
+        }
+        p {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .container {
+            display: flex;
+            padding-bottom: 45px;
+        }
+        .notepad-container textarea {
+            background-color: #d9dadf;
+            color: #000;
+        }
+        #editor {
+            width: 710px;
+            height: 450px;
+            border: 1px solid #ccc;
+            padding: 10px;
+        }
+        #statistics {
+            display: flex;
+            flex-direction: row;
+        }
+        #statistics p {
+            font-weight: normal;
+            margin: 0px 20px 0px 0px;
+        }
+		#wordCountResults {
+			margin-top: 10px;
+		}
+        .notepad-container,
+        .conversion-container {
+            flex: 1;
+        }
+        .conversion-container {
+            padding-left: 40px;
+        }
+        .conversion-container input[type="file"],
+        .conversion-container input[type="text"] {
+            margin: 2px 0px;
+        }
+        .conversion-container img {
+            margin: 3px 5px 0 0;
+        }
+		#titleCopy, #permalinkCopy, #question {
+    vertical-align: top;
+	margin-top: 15px;
+		}
+		#desc {
+            width: 415px;
+            height: 50px;
+            border: 1px solid #ccc;
+            padding: 5px;
+        }
+		#descCount {
+            font-weight: normal;
+        }
+		.descCount {
+			margin: 0px;
+		}
+		#translatedText {
+            font-weight: normal;
+			margin: 0px;
+			padding: 0px;
+			font-size: 14px;
+        }
+		
+</style>
+<script>
+        // Array kata-kata yang ingin dihitung
+    var wordsToCount = [
+        "Administrasi",
+        "Administrasi Publik",
+        "Agrikultur",
+        "Akuntansi",
+        "Astronomi",
+        "Biologi",
+        "Bisnis",
+        "Budaya",
+        "Budaya dan Tradisi",
+        "Data",
+        "Edukasi",
+        "Ekonomi",
+        "Gaya Hidup",
+        "Geografi",
+        "Geologi",
+        "Hukum",
+        "Ilmu Pengetahuan Alam",
+        "Ilmu Pengetahuan Sosial",
+        "Informasi",
+        "Inspiratif",
+        "Internasional",
+        "Investasi",
+        "Karir",
+        "Kerajinan",
+        "Kesehatan",
+        "Kesenian",
+        "Keuangan",
+        "Kewarganegaraan",
+        "Kimia",
+        "Lingkungan",
+        "Manajemen",
+        "Matematika",
+        "Organisasi",
+        "Pajak",
+        "Pariwisata",
+        "Pendidikan",
+        "Pertanian",
+        "Politik",
+        "Sejarah",
+        "Sosial",
+        "Sosiologi",
+        "Sport",
+        "Teknologi"
+    ];
+
+    function saveTextAsFile() {
+        var textToSave = document.getElementById('editor').value;
+        var textToSaveAsBlob = new Blob([textToSave], { type: "text/plain" });
+        var textToSaveAsURL = window.URL.createObjectURL(textToSaveAsBlob);
+        var fileNameToSaveAs = document.getElementById('fileName').value;
+        var downloadLink = document.createElement("a");
+        downloadLink.download = fileNameToSaveAs;
+        downloadLink.innerHTML = "Download File";
+        downloadLink.href = textToSaveAsURL;
+        downloadLink.onclick = destroyClickedElement;
+        downloadLink.style.display = "none";
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+    }
+
+    function destroyClickedElement(event) {
+        document.body.removeChild(event.target);
+    }
+
+    function handlePaste(e) {
+        e.preventDefault();
+        var text = (e.originalEvent || e).clipboardData.getData('text/plain');
+        text = text.replace(/# ?/g, '');
+        document.execCommand('insertText', false, text);
+    }
+
+    function countStatistics() {
+        var text = document.getElementById('editor').value;
+        var wordCount = text.trim().split(/\s+/).length;
+        var characterCount = text.length;
+        var paragraphCount = text.trim().split('\n\n').length;
+        var sentenceCount = text.trim().split(/[.!?]+/).length - 1;
+        text = text.replace(/\*/g, '').replace(/: /g, '\n').replace(/^\s*[\r\n]/gm, '').replace(/- /g, '');;
+
+        var wordCounts = {};
+        wordsToCount.forEach(function (word) {
+            var wordOccurrences = text.match(new RegExp("\\b" + word + "\\b", "gi"));
+            var wordCount = wordOccurrences ? wordOccurrences.length : 0;
+            wordCounts[word] = wordCount;
+        });
+
+        // Urutkan objek wordCounts berdasarkan jumlah kata secara descending
+        var sortedWordCounts = Object.entries(wordCounts)
+            .sort((a, b) => b[1] - a[1])
+            .reduce((acc, [word, count]) => {
+                acc[word] = count;
+                return acc;
+            }, {});
+
+        var wordCountResults = "";
+        for (var word in sortedWordCounts) {
+            if (sortedWordCounts[word] > 0) {
+                // Membuat tautan ke halaman sesuai kata yang muncul
+                var link = "<a href='https://www.vartikel.com/search/label/" + word + "?&max-results=6' target='_blank'>" + word + "</a>";
+                wordCountResults += link + ": " + sortedWordCounts[word] + " ";
+                wordCountResults += "<button onclick='copyLink(\"" + word + "\")'>Copy</button>" + " | "; // Tombol Copy
+            }
+        }
+        document.getElementById('editor').value = text;
+        document.getElementById('wordCount').textContent = wordCount;
+        document.getElementById('characterCount').textContent = characterCount;
+        document.getElementById('paragraphCount').textContent = paragraphCount;
+        document.getElementById('sentenceCount').textContent = sentenceCount;
+
+        var wordCountResultsElement = document.getElementById('wordCountResults');
+        if (wordCountResults) {
+            wordCountResultsElement.style.display = "block";
+            wordCountResultsElement.innerHTML = wordCountResults;
+        } else {
+            wordCountResultsElement.style.display = "none";
+        }
+    }
+
+    function copyLink(word) {
+    var link = "https://www.vartikel.com/search/label/" + word + "?&max-results=6";
+
+    // Buat elemen input untuk menyimpan tautan
+    var linkInput = document.createElement("input");
+    linkInput.value = link;
+    document.body.appendChild(linkInput);
+
+    // Pilih dan salin tautan dari elemen input
+    linkInput.select();
+    document.execCommand("copy");
+
+    // Hapus elemen input setelah menyalin
+    document.body.removeChild(linkInput);
+
+    // Tampilkan pesan pemberitahuan bahwa tautan telah disalin
+    var notification = document.createElement("div");
+    notification.textContent = "Link copied: " + link;
+    notification.style.position = "fixed";
+    notification.style.backgroundColor = "rgba(0, 0, 0, 0.7)";
+    notification.style.color = "#fff";
+    notification.style.padding = "10px";
+    notification.style.bottom = "20px";
+    notification.style.left = "50%";
+    notification.style.transform = "translateX(-50%)";
+    notification.style.borderRadius = "5px";
+    notification.style.zIndex = "9999";
+    document.body.appendChild(notification);
+
+    // Hilangkan pesan pemberitahuan setelah 2 detik
+    setTimeout(function () {
+        document.body.removeChild(notification);
+    }, 200);
+}
+	
+        // Title - Permalink
+        window.addEventListener('DOMContentLoaded', function () {
+    var blogTitleInput = document.getElementById('keyword');
+    var titleInput = document.getElementById('title');
+    var permalinkInput = document.getElementById('permalink');
+    var titleCopyButton = document.getElementById('titleCopy');
+    var permalinkCopyButton = document.getElementById('permalinkCopy');
+    var questionButton = document.getElementById('question');
+
+    function validateAndGeneratePermalink() {
+        var title = blogTitleInput.value.trim(); // Menghapus spasi di awal dan akhir
+        if (title === '') {
+            // Jika teks kosong, beri tahu pengguna
+            alert('Teks tidak boleh kosong');
+            return;
+        }
+
+        var words = title.split(' ');
+
+        for (var i = 0; i < words.length; i++) {
+            words[i] = words[i].charAt(0).toUpperCase() + words[i].slice(1);
+        }
+
+        var capitalizedTitle = words.join(' ');
+        titleInput.value = capitalizedTitle;
+
+        var cleanedTitle = capitalizedTitle.replace(/\?/g, ''); // Menghapus semua simbol "?"
+        var permalink = cleanedTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+        permalinkInput.value = permalink;
+    }
+
+    blogTitleInput.addEventListener('input', validateAndGeneratePermalink);
+
+    questionButton.addEventListener('click', function () {
+        blogTitleInput.value += '?'; // Menambahkan simbol "?" di akhir teks keyword
+        titleInput.value += '?'; // Menambahkan simbol "?" di akhir teks title
+    });
+
+    titleCopyButton.addEventListener('click', function () {
+        titleInput.select();
+        document.execCommand('copy');
+    });
+
+    permalinkCopyButton.addEventListener('click', function () {
+        permalinkInput.select();
+        document.execCommand('copy');
+    });
+});
+		// Desc
+		function updateDescCount() {
+            var textarea = document.getElementById("desc");
+            var descCount = document.getElementById("descCount");
+            var count = textarea.value.length;
+            descCount.textContent = count + " / 150";
+        }
+        // Panggil fungsi updateDescCount() saat halaman dimuat pertama kali
+        updateDescCount();
+		
+		// Translate
+		// Fungsi untuk menangani pemrosesan teks saat tombol "Enter" ditekan
+        document.getElementById("textInput").addEventListener("keydown", function (event) {
+            if (event.key === "Enter") {
+                translateText();
+                event.preventDefault(); // Mencegah peristiwa Enter bawaan (misalnya pergi ke baris berikutnya)
+            }
+        });
+
+        function translateText() {
+            const textInput = document.getElementById("textInput").value;
+            const selectedLanguage = document.getElementById("languageSelect").value;
+
+            let sourceLang, targetLang;
+
+            if (selectedLanguage === "en") {
+                sourceLang = "en";
+                targetLang = "id";
+            } else {
+                sourceLang = "id";
+                targetLang = "en";
+            }
+
+            const apiUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sourceLang}&tl=${targetLang}&dt=t&q=${encodeURI(textInput)}`;
+
+            fetch(apiUrl)
+                .then(response => response.json())
+                .then(data => {
+                    const translatedText = data[0][0][0];
+                    document.getElementById("translatedText").innerText = translatedText;
+                })
+                .catch(error => console.error(error));
+        }
+
+        function clearText() {
+            document.getElementById("textInput").value = "";
+            document.getElementById("translatedText").innerText = "";
+        }
+        
+        // PNG to WebP 16:9
+        function convertImageWebP() {
+            var input = document.getElementById("imageInputWebP");
+            var output = document.getElementById("outputWebP");
+            var fileSizeLabel = document.getElementById("fileSizeLabelWebP");
+            var titleInput = document.getElementById("judulGambarInput").value;
+            if (input.files && input.files[0]) {
+                var reader = new FileReader();
+                reader.onload = function (e) {
+                    var img = new Image();
+                    img.onload = function () {
+                        var canvas = document.createElement("canvas");
+                        var ctx = canvas.getContext("2d");
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        ctx.drawImage(img, 0, 0);
+                        var webpData = canvas.toDataURL("image/webp", 0.85);
+                        output.src = webpData;
+                        var fileSize = Math.round(webpData.length / 1024); // Ukuran dalam kilobita
+                        fileSizeLabel.innerText = fileSize + " KB";
+                        var downloadLink = document.createElement("a");
+                        downloadLink.href = webpData;
+                        downloadLink.download = titleInput + ".webp";
+                        downloadLink.style.display = "none";
+                        document.body.appendChild(downloadLink);
+                        downloadLink.click();
+                        document.body.removeChild(downloadLink);
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+        // PNG to JPG
+        function convertImageJPG() {
+            var input = document.getElementById("imageInputJPG");
+            var output = document.getElementById("outputJPG");
+            var fileSizeLabel = document.getElementById("fileSizeLabelJPG");
+            var titleInput = document.getElementById("judulGambarInput").value;
+            if (input.files && input.files[0]) {
+                var reader = new FileReader();
+                reader.onload = function (e) {
+                    var img = new Image();
+                    img.onload = function () {
+                        var canvas = document.createElement("canvas");
+                        var ctx = canvas.getContext("2d");
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        ctx.drawImage(img, 0, 0);
+                        var webpData = canvas.toDataURL("image/jpeg", 0.85);
+                        output.src = webpData;
+                        var fileSize = Math.round(webpData.length / 1024); // Ukuran dalam kilobita
+                        fileSizeLabel.innerText = fileSize + " KB";
+                        var downloadLink = document.createElement("a");
+                        downloadLink.href = webpData;
+                        downloadLink.download = titleInput + ".jpg";
+                        downloadLink.style.display = "none";
+                        document.body.appendChild(downloadLink);
+                        downloadLink.click();
+                        document.body.removeChild(downloadLink);
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+    </script>
+</head>
+<body>
+<div class="container">
+	<div class="notepad-container">
+	<p>
+                Notepad
+            </p>
+        <textarea id="editor" placeholder="Write your notes here..." oninput="countStatistics()" onpaste="handlePaste(event)"></textarea>
+        <br>
+		<div id="statistics">
+            <p>
+                Words: <span id="wordCount">0</span>
+            </p>
+            <p>
+                Characters: <span id="characterCount">0</span>
+            </p>
+            <p>
+                Paragraphs: <span id="paragraphCount">0</span>
+            </p>
+            <p>
+                Sentences: <span id="sentenceCount">0</span>
+            </p>
+			<label for="fileName">File Name:</label>
+            <input type="text" id="fileName" placeholder="Enter file name">
+            <button id="saveButton" onclick="saveTextAsFile()">Save</button>
+        </div>
+		<div id="wordCountResults" style="display: none"></div>
+    </div>
+	<div class="conversion-container">
+		<!-- Title - Permalink -->
+		<p>
+			Title - Permalink
+		</p>
+		<textarea id="keyword" rows="2" cols="55" placeholder="Masukkan Judul di Sini"></textarea>
+		<button id="question">?</button>
+        <textarea id="title" rows="2" cols="55" placeholder="Judul" readonly></textarea>
+		<button id="titleCopy">Copy</button>
+		<br>
+		<textarea id="permalink" rows="2" cols="55" placeholder="Permalink" readonly></textarea>
+		<button id="permalinkCopy">Copy</button>
+		<br>
+		<!-- Desc -->
+		<p>
+			Description
+		</p>
+		<textarea id="desc" name="teks" maxlength="150" oninput="updateDescCount()" placeholder="Deskripsi Penelusuran"></textarea>
+		<p class="descCount">
+			<span id="descCount">0</span>
+		</p>
+		<!-- Translate -->
+		<p>
+			Translate
+		</p>
+		<label for="languageSelect"></label>
+    <select id="languageSelect">
+        <option value="id">Indonesia ke Inggris</option>
+		        <option value="en">Inggris ke Indonesia</option>
+    </select>
+	    <button onclick="translateText()">Terjemahkan</button>
+			<button onclick="clearText()">Clear</button>
+    <br>
+    <textarea id="textInput" rows="1" cols="45" placeholder="Masukkan teks"></textarea>
+    <p id="translatedText"></p>
+		<!-- Image Converter -->
+		<p>
+			Image Converter
+		</p>
+		<input type="text" id="judulGambarInput" size="45" placeholder="Title">
+		<input type="text" size="45" placeholder="Alt & Caption"><br>
+		<!-- PNG to WebP -->
+		<input type="file" id="imageInputWebP" accept="image/png" onchange="convertImageWebP()"><br>
+		<img id="outputWebP" alt="png to webp" style="max-width: 25%; max-height: 25%;"><span id="fileSizeLabelWebP"></span><br>
+		<br>
+		<!-- PNG to JPG -->
+		<input type="file" id="imageInputJPG" accept="image/png" onchange="convertImageJPG()"><br>
+		<img id="outputJPG" alt="png to jpg" style="max-width: 25%; max-height: 25%;"><span id="fileSizeLabelJPG"></span><br>
+		<br>
+	</div>
+</div>
+</body>
+</html>
